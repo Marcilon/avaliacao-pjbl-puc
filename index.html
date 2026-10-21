@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avaliação por Pares - PjBL PUC</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Biblioteca para ler Excel (.xlsx) diretamente no navegador -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .card { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .header-puc { background-color: #003366; color: white; border-radius: 12px 12px 0 0; }
+    .nav-tabs .nav-link { color: #003366; font-weight: 500; }
+  </style>
+</head>
+<body class="py-4">
+
+<div class="container" style="max-width: 650px;">
+  <div class="card">
+    <div class="header-puc p-4 text-center">
+      <h2>Avaliação por Pares - PjBL</h2>
+      <p class="mb-0">Sistema de Avaliação do Grupo</p>
+    </div>
+    
+    <div class="card-body p-4">
+      
+      <!-- SESSÃO DE UPLOAD DA PLANILHA (SE NÃO HOUVER TURMA CARREGADA) -->
+      <div id="upload-container" class="mb-4">
+        <div class="alert alert-warning">
+          <strong>Configuração da Turma:</strong> Selecione a planilha Excel (<code>alunos_e_grupos.xlsx</code>) para carregar os dados dos alunos.
+        </div>
+        <div class="mb-3">
+          <label class="form-label font-weight-bold">Importar Planilha de Alunos (.xlsx)</label>
+          <input type="file" id="excel-file" class="form-control" accept=".xlsx, .xls">
+        </div>
+      </div>
+
+      <!-- TELA DE AUTENTICAÇÃO (LOGIN / CADASTRO) -->
+      <div id="auth-container" class="d-none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="badge bg-success" id="turma-status">Turma Carregada</span>
+          <button class="btn btn-link btn-sm text-decoration-none" onclick="resetTurma()">Trocar Planilha/Turma</button>
+        </div>
+
+        <ul class="nav nav-tabs nav-justified mb-3" id="authTab" role="tablist">
+          <li class="nav-item">
+            <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#tab-login" type="button">Entrar (Login)</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#tab-register" type="button">Primeiro Acesso (Criar Senha)</button>
+          </li>
+        </ul>
+
+        <div class="tab-content" id="authTabContent">
+          
+          <!-- ABA 1: LOGIN -->
+          <div class="tab-pane fade show active" id="tab-login">
+            <div class="mb-3">
+              <label class="form-label">E-mail Institucional</label>
+              <input type="email" id="login-email" class="form-control" placeholder="exemplo@pucgo.edu.br" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Sua Senha</label>
+              <input type="password" id="login-senha" class="form-control" placeholder="Digite sua senha" required>
+            </div>
+            <button id="btn-login" class="btn btn-primary w-100">Entrar no Sistema</button>
+            <div id="login-error" class="text-danger mt-2 d-none">E-mail ou senha incorretos.</div>
+          </div>
+
+          <!-- ABA 2: CADASTRO -->
+          <div class="tab-pane fade" id="tab-register">
+            <div class="mb-3">
+              <label class="form-label">E-mail Institucional</label>
+              <input type="email" id="reg-email" class="form-control" placeholder="exemplo@pucgo.edu.br" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Matrícula (para validação)</label>
+              <input type="text" id="reg-matricula" class="form-control" placeholder="Digite sua matrícula" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Crie uma Senha</label>
+              <input type="password" id="reg-senha" class="form-control" placeholder="Mínimo 6 caracteres" required>
+            </div>
+            <button id="btn-cadastrar" class="btn btn-success w-100">Cadastrar e Criar Senha</button>
+            <div id="reg-error" class="text-danger mt-2 d-none">E-mail ou matrícula não encontrados na planilha da turma.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TELA DO FORMULÁRIO DE AVALIAÇÃO -->
+      <form id="form-avaliacao" class="d-none mt-2">
+        <div class="alert alert-info py-2 d-flex justify-content-between align-items-center">
+          <div>
+            <strong>Avaliador:</strong> <span id="info-avaliador"></span><br>
+            <strong>Grupo:</strong> <span id="info-grupo"></span>
+          </div>
+          <button type="button" id="btn-logout" class="btn btn-outline-danger btn-sm">Sair</button>
+        </div>
+
+        <h5 class="mb-3">1. Selecione o Colega a Avaliar</h5>
+        <div class="mb-3">
+          <select id="select-colega" class="form-select" required>
+            <option value="">-- Selecione o colega --</option>
+          </select>
+        </div>
+
+        <hr>
+
+        <h5 class="mb-3">2. Atribuição de Notas (Escala 1 a 10)</h5>
+        <div class="mb-3">
+          <label class="form-label">Criterio 1: Trabalho em Equipe</label>
+          <input type="number" id="criterio1" class="form-control" min="1" max="10" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Criterio 2: Cumprimento de Prazos</label>
+          <input type="number" id="criterio2" class="form-control" min="1" max="10" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Criterio 3: Contribuição Técnica</label>
+          <input type="number" id="criterio3" class="form-control" min="1" max="10" required>
+        </div>
+
+        <hr>
+
+        <h5 class="mb-3">3. Feedback Qualitativo</h5>
+        <div class="mb-3">
+          <label class="form-label">Pontos Positivos do Colega</label>
+          <textarea id="pontos-positivos" class="form-control" rows="3" required></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Pontos de Melhoria / Justificativa</label>
+          <textarea id="pontos-melhoria" class="form-control" rows="3" required></textarea>
+        </div>
+
+        <button type="submit" id="btn-enviar" class="btn btn-success w-100 btn-lg">Enviar Avaliação</button>
+      </form>
+
+      <!-- FEEDBACK DE SUCESSO -->
+      <div id="alert-sucesso" class="alert alert-success d-none mt-4 text-center">
+        <h4>Avaliação Enviada com Sucesso!</h4>
+        <p>Sua nota e comentários foram gravados com sucesso.</p>
+        <button class="btn btn-outline-success btn-sm mt-2" onclick="resetFormulario()">Avaliar outro colega</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- MÓDULOS DO FIREBASE -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+  // CHAVES DO SEU PROJETO FIREBASE
+  const firebaseConfig = {
+    apiKey: "AIzaSyCFxVR7kPlxJ07257AnWCExpYrpizwQHdQ",
+    authDomain: "avaliacao-pjbl-puc.firebaseapp.com",
+    projectId: "avaliacao-pjbl-puc",
+    storageBucket: "avaliacao-pjbl-puc.firebasestorage.app",
+    messagingSenderId: "416799348046",
+    appId: "1:416799348046:web:f9a980f50671fc11193a1f"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // URL DO POWER AUTOMATE (SUBSTITUA PELA SUA NO PASSO 4)
+  const POWER_AUTOMATE_WEBHOOK_URL = "COLE_AQUI_A_URL_DO_POWER_AUTOMATE";
+  
+  let alunosData = [];
+  let usuarioLogadoData = null;
+
+  // Carrega a planilha salva no armazenamento do navegador (se existir)
+  const cachedAlunos = localStorage.getItem('puc_alunos_data');
+  if (cachedAlunos) {
+    alunosData = JSON.parse(cachedAlunos);
+    document.getElementById('upload-container').classList.add('d-none');
+    document.getElementById('auth-container').classList.remove('d-none');
+  }
+
+  // LER PLANILHA EXCEL (.XLSX)
+  document.getElementById('excel-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target.result;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+      const rawData = XLSX.utils.sheet_to_json(ws);
+
+      // Padroniza as colunas da planilha
+      alunosData = rawData.map(item => ({
+        matricula: String(item.MATRÍCULA || item.MATRICULA || '').trim(),
+        nome: String(item.NOME || '').trim(),
+        email: String(item.EMAIL || '').trim().toLowerCase(),
+        grupo: String(item.GRUPO || '').trim()
+      }));
+
+      localStorage.setItem('puc_alunos_data', JSON.stringify(alunosData));
+      document.getElementById('upload-container').classList.add('d-none');
+      document.getElementById('auth-container').classList.remove('d-none');
+      alert(`Planilha importada com sucesso! ${alunosData.length} alunos carregados.`);
+    };
+    reader.readAsBinaryString(file);
+  });
+
+  window.resetTurma = () => {
+    if (confirm("Deseja remover a planilha atual para carregar uma nova turma?")) {
+      localStorage.removeItem('puc_alunos_data');
+      location.reload();
+    }
+  };
+
+  // CADASTRO DE ALUNO
+  document.getElementById('btn-cadastrar').addEventListener('click', async () => {
+    const email = document.getElementById('reg-email').value.trim().toLowerCase();
+    const matricula = document.getElementById('reg-matricula').value.trim();
+    const senha = document.getElementById('reg-senha').value;
+
+    const alunoExiste = alunosData.find(a => a.email === email && a.matricula === matricula);
+
+    if (!alunoExiste) {
+      document.getElementById('reg-error').classList.remove('d-none');
+      return;
+    }
+
+    try {
+      await createUserWithEmailAndPassword(auth, email, senha);
+      alert("Cadastro realizado! Você já está conectado.");
+    } catch (error) {
+      alert("Erro ao cadastrar: " + error.message);
+    }
+  });
+
+  // LOGIN DE ALUNO
+  document.getElementById('btn-login').addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const senha = document.getElementById('login-senha').value;
+
+    try {
+      await signInWithEmailAndPassword(auth, email, senha);
+    } catch (error) {
+      document.getElementById('login-error').classList.remove('d-none');
+    }
+  });
+
+  // VERIFICA SESSÃO DO USUÁRIO
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      const aluno = alunosData.find(a => a.email.toLowerCase() === user.email.toLowerCase());
+      if (aluno) {
+        usuarioLogadoData = aluno;
+        carregarFormularioAvaliacao(aluno);
+      }
+    } else if (alunosData.length > 0) {
+      document.getElementById('auth-container').classList.remove('d-none');
+      document.getElementById('form-avaliacao').classList.add('d-none');
+    }
+  });
+
+  document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
+
+  function carregarFormularioAvaliacao(aluno) {
+    document.getElementById('auth-container').classList.add('d-none');
+    document.getElementById('form-avaliacao').classList.remove('d-none');
+    document.getElementById('info-avaliador').innerText = aluno.nome;
+    document.getElementById('info-grupo').innerText = aluno.grupo;
+
+    const colegas = alunosData.filter(a => String(a.grupo) === String(aluno.grupo) && a.email !== aluno.email);
+    const selectColega = document.getElementById('select-colega');
+    selectColega.innerHTML = '<option value="">-- Selecione o colega --</option>';
+    
+    colegas.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.nome;
+      opt.innerText = c.nome;
+      selectColega.appendChild(opt);
+    });
+  }
+
+  // ENVIO DAS NOTAS PARA O POWER AUTOMATE
+  document.getElementById('form-avaliacao').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btnEnviar = document.getElementById('btn-enviar');
+    btnEnviar.disabled = true;
+
+    const payload = {
+      Data_Hora: new Date().toLocaleString("pt-BR"),
+      Avaliador_Nome: usuarioLogadoData.nome,
+      Avaliador_Email: usuarioLogadoData.email,
+      Grupo: usuarioLogadoData.grupo,
+      Avaliado_Nome: document.getElementById('select-colega').value,
+      Criterio_1: parseInt(document.getElementById('criterio1').value),
+      Criterio_2: parseInt(document.getElementById('criterio2').value),
+      Criterio_3: parseInt(document.getElementById('criterio3').value),
+      Pontos_Positivos: document.getElementById('pontos-positivos').value,
+      Pontos_Melhoria_Justificativa: document.getElementById('pontos-melhoria').value
+    };
+
+    try {
+      const res = await fetch(POWER_AUTOMATE_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok || res.status === 202) {
+        document.getElementById('form-avaliacao').classList.add('d-none');
+        document.getElementById('alert-sucesso').classList.remove('d-none');
+      }
+    } catch (err) {
+      alert("Erro ao enviar avaliação. Verifique a URL do Power Automate.");
+      btnEnviar.disabled = false;
+    }
+  });
+
+  window.resetFormulario = () => {
+    document.getElementById('alert-sucesso').classList.add('d-none');
+    document.getElementById('form-avaliacao').classList.remove('d-none');
+    document.getElementById('form-avaliacao').reset();
+    document.getElementById('btn-enviar').disabled = false;
+  };
+</script>
+
+</body>
+</html>
