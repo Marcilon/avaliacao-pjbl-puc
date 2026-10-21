@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Avaliação por Pares - PjBL PUC</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Biblioteca para ler Excel (.xlsx) diretamente no navegador -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -20,29 +19,13 @@
   <div class="card">
     <div class="header-puc p-4 text-center">
       <h2>Avaliação por Pares - PjBL</h2>
-      <p class="mb-0">Sistema de Avaliação do Grupo</p>
+      <p class="mb-0">Sistema de Avaliação do Grupo e Disciplina</p>
     </div>
     
     <div class="card-body p-4">
-      
-      <!-- SESSÃO DE UPLOAD DA PLANILHA (SE NÃO HOUVER TURMA CARREGADA) -->
-      <div id="upload-container" class="mb-4">
-        <div class="alert alert-warning">
-          <strong>Configuração da Turma:</strong> Selecione a planilha Excel (<code>alunos_e_grupos.xlsx</code>) para carregar os dados dos alunos.
-        </div>
-        <div class="mb-3">
-          <label class="form-label font-weight-bold">Importar Planilha de Alunos (.xlsx)</label>
-          <input type="file" id="excel-file" class="form-control" accept=".xlsx, .xls">
-        </div>
-      </div>
 
       <!-- TELA DE AUTENTICAÇÃO (LOGIN / CADASTRO) -->
-      <div id="auth-container" class="d-none">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <span class="badge bg-success" id="turma-status">Turma Carregada</span>
-          <button class="btn btn-link btn-sm text-decoration-none" onclick="resetTurma()">Trocar Planilha/Turma</button>
-        </div>
-
+      <div id="auth-container">
         <ul class="nav nav-tabs nav-justified mb-3" id="authTab" role="tablist">
           <li class="nav-item">
             <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#tab-login" type="button">Entrar (Login)</button>
@@ -83,7 +66,7 @@
               <input type="password" id="reg-senha" class="form-control" placeholder="Mínimo 6 caracteres" required>
             </div>
             <button id="btn-cadastrar" class="btn btn-success w-100">Cadastrar e Criar Senha</button>
-            <div id="reg-error" class="text-danger mt-2 d-none">E-mail ou matrícula não encontrados na planilha da turma.</div>
+            <div id="reg-error" class="text-danger mt-2 d-none">E-mail ou matrícula não encontrados na lista da turma.</div>
           </div>
 
         </div>
@@ -110,37 +93,49 @@
 
         <h5 class="mb-3">2. Atribuição de Notas (Escala 1 a 10)</h5>
         <div class="mb-3">
-          <label class="form-label">Criterio 1: Trabalho em Equipe</label>
+          <label class="form-label">Critério 1: Trabalho em Equipe</label>
           <input type="number" id="criterio1" class="form-control" min="1" max="10" required>
         </div>
         <div class="mb-3">
-          <label class="form-label">Criterio 2: Cumprimento de Prazos</label>
+          <label class="form-label">Critério 2: Cumprimento de Prazos</label>
           <input type="number" id="criterio2" class="form-control" min="1" max="10" required>
         </div>
         <div class="mb-3">
-          <label class="form-label">Criterio 3: Contribuição Técnica</label>
+          <label class="form-label">Critério 3: Contribuição Técnica</label>
           <input type="number" id="criterio3" class="form-control" min="1" max="10" required>
         </div>
 
         <hr>
 
-        <h5 class="mb-3">3. Feedback Qualitativo</h5>
+        <h5 class="mb-3">3. Feedback do Colega</h5>
         <div class="mb-3">
           <label class="form-label">Pontos Positivos do Colega</label>
-          <textarea id="pontos-positivos" class="form-control" rows="3" required></textarea>
+          <textarea id="pontos-positivos" class="form-control" rows="2" required></textarea>
         </div>
         <div class="mb-3">
           <label class="form-label">Pontos de Melhoria / Justificativa</label>
-          <textarea id="pontos-melhoria" class="form-control" rows="3" required></textarea>
+          <textarea id="pontos-melhoria" class="form-control" rows="2" required></textarea>
         </div>
 
-        <button type="submit" id="btn-enviar" class="btn btn-success w-100 btn-lg">Enviar Avaliação</button>
+        <hr>
+
+        <h5 class="mb-3">4. Avaliação Geral da Disciplina / Curso</h5>
+        <div class="mb-3">
+          <label class="form-label">Pontos Positivos da Disciplina</label>
+          <textarea id="disciplina-positivos" class="form-control" rows="2" placeholder="O que você mais gostou na disciplina/metodologia PjBL?"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Pontos de Melhoria da Disciplina</label>
+          <textarea id="disciplina-melhoria" class="form-control" rows="2" placeholder="O que pode ser melhorado na disciplina para os próximos semestres?"></textarea>
+        </div>
+
+        <button type="submit" id="btn-enviar" class="btn btn-success w-100 btn-lg mt-3">Enviar Avaliação</button>
       </form>
 
       <!-- FEEDBACK DE SUCESSO -->
       <div id="alert-sucesso" class="alert alert-success d-none mt-4 text-center">
         <h4>Avaliação Enviada com Sucesso!</h4>
-        <p>Sua nota e comentários foram gravados com sucesso.</p>
+        <p>Sua nota e comentários foram registrados com sucesso.</p>
         <button class="btn btn-outline-success btn-sm mt-2" onclick="resetFormulario()">Avaliar outro colega</button>
       </div>
 
@@ -155,7 +150,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-  // CHAVES DO SEU PROJETO FIREBASE
   const firebaseConfig = {
     apiKey: "AIzaSyCFxVR7kPlxJ07257AnWCExpYrpizwQHdQ",
     authDomain: "avaliacao-pjbl-puc.firebaseapp.com",
@@ -168,55 +162,33 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // URL DO POWER AUTOMATE (SUBSTITUA PELA SUA NO PASSO 4)
-  const POWER_AUTOMATE_WEBHOOK_URL = "https://default73319f4289084b899f8d558cf4d5d7.76.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/19/workflows/38d2aef2a62e4284b5aa1faef602b3a0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5WeoxBf1W0TpdZ3Q-_JPrxXbbQKz5g-_6aaJs5FuKgA";
+  // COLE AQUI A URL DO SEU POWER AUTOMATE
+  const POWER_AUTOMATE_WEBHOOK_URL = "COLE_AQUI_A_URL_DO_POWER_AUTOMATE";
   
   let alunosData = [];
   let usuarioLogadoData = null;
 
-  // Carrega a planilha salva no armazenamento do navegador (se existir)
-  const cachedAlunos = localStorage.getItem('puc_alunos_data');
-  if (cachedAlunos) {
-    alunosData = JSON.parse(cachedAlunos);
-    document.getElementById('upload-container').classList.add('d-none');
-    document.getElementById('auth-container').classList.remove('d-none');
-  }
+  // BUSCA A PLANILHA SALVA NO REPOSITÓRIO AUTOMATICAMENTE
+  async function carregarDadosTurma() {
+    try {
+      const response = await fetch('./turma.xlsx');
+      const data = await response.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawData = XLSX.utils.sheet_to_json(firstSheet);
 
-  // LER PLANILHA EXCEL (.XLSX)
-  document.getElementById('excel-file').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const bstr = evt.target.result;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const wsname = wb.SheetNames[0];
-      const ws = wb.Sheets[wsname];
-      const rawData = XLSX.utils.sheet_to_json(ws);
-
-      // Padroniza as colunas da planilha
       alunosData = rawData.map(item => ({
         matricula: String(item.MATRÍCULA || item.MATRICULA || '').trim(),
         nome: String(item.NOME || '').trim(),
         email: String(item.EMAIL || '').trim().toLowerCase(),
         grupo: String(item.GRUPO || '').trim()
       }));
-
-      localStorage.setItem('puc_alunos_data', JSON.stringify(alunosData));
-      document.getElementById('upload-container').classList.add('d-none');
-      document.getElementById('auth-container').classList.remove('d-none');
-      alert(`Planilha importada com sucesso! ${alunosData.length} alunos carregados.`);
-    };
-    reader.readAsBinaryString(file);
-  });
-
-  window.resetTurma = () => {
-    if (confirm("Deseja remover a planilha atual para carregar uma nova turma?")) {
-      localStorage.removeItem('puc_alunos_data');
-      location.reload();
+    } catch (err) {
+      console.error("Erro ao carregar o arquivo turma.xlsx do GitHub:", err);
     }
-  };
+  }
+
+  carregarDadosTurma();
 
   // CADASTRO DE ALUNO
   document.getElementById('btn-cadastrar').addEventListener('click', async () => {
@@ -259,7 +231,7 @@
         usuarioLogadoData = aluno;
         carregarFormularioAvaliacao(aluno);
       }
-    } else if (alunosData.length > 0) {
+    } else {
       document.getElementById('auth-container').classList.remove('d-none');
       document.getElementById('form-avaliacao').classList.add('d-none');
     }
@@ -301,7 +273,9 @@
       Criterio_2: parseInt(document.getElementById('criterio2').value),
       Criterio_3: parseInt(document.getElementById('criterio3').value),
       Pontos_Positivos: document.getElementById('pontos-positivos').value,
-      Pontos_Melhoria_Justificativa: document.getElementById('pontos-melhoria').value
+      Pontos_Melhoria_Justificativa: document.getElementById('pontos-melhoria').value,
+      Disciplina_Pontos_Positivos: document.getElementById('disciplina-positivos').value,
+      Disciplina_Pontos_Melhoria: document.getElementById('disciplina-melhoria').value
     };
 
     try {
