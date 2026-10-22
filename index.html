@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Avaliação por Pares - PjBL PUC - Projeto Integrador Beta</title>
+  <title>Avaliação por Pares - PjBL PUC - Projeto Integrador BETA</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
@@ -24,8 +24,14 @@
     
     <div class="card-body p-4">
 
+      <!-- CARREGANDO DADOS -->
+      <div id="loading-spinner" class="text-center my-4">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">A carregar lista de alunos...</p>
+      </div>
+
       <!-- TELA DE AUTENTICAÇÃO (LOGIN / CADASTRO) -->
-      <div id="auth-container">
+      <div id="auth-container" class="d-none">
         <ul class="nav nav-tabs nav-justified mb-3" id="authTab" role="tablist">
           <li class="nav-item">
             <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#tab-login" type="button">Entrar (Login)</button>
@@ -41,7 +47,7 @@
           <div class="tab-pane fade show active" id="tab-login">
             <div class="mb-3">
               <label class="form-label">E-mail Institucional</label>
-              <input type="email" id="login-email" class="form-control" placeholder="exemplo@pucgo.edu.br" required>
+              <input type="email" id="login-email" class="form-control" placeholder="exemplo@pucgoias.edu.br" required>
             </div>
             <div class="mb-3">
               <label class="form-label">Sua Senha</label>
@@ -55,7 +61,7 @@
           <div class="tab-pane fade" id="tab-register">
             <div class="mb-3">
               <label class="form-label">E-mail Institucional</label>
-              <input type="email" id="reg-email" class="form-control" placeholder="exemplo@pucgo.edu.br" required>
+              <input type="email" id="reg-email" class="form-control" placeholder="exemplo@pucgoias.edu.br" required>
             </div>
             <div class="mb-3">
               <label class="form-label">Matrícula (para validação)</label>
@@ -151,7 +157,7 @@
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
   const firebaseConfig = {
-    apiKey: "AIzaSyCEibkubasNrefe2UecF2WXxxejVnP14VU",
+    apiKey: "AIzaSyCFxVR7kPlxJ07257AnWCExpYrpizwQHdQ",
     authDomain: "avaliacao-pjbl-puc.firebaseapp.com",
     projectId: "avaliacao-pjbl-puc",
     storageBucket: "avaliacao-pjbl-puc.firebasestorage.app",
@@ -169,7 +175,7 @@
 
   async function carregarDadosTurma() {
     try {
-      const response = await fetch('./turma.xlsx');
+      const response = await fetch('./turma.xlsx?v=' + new Date().getTime());
       const data = await response.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -179,15 +185,39 @@
         matricula: String(item.MATRÍCULA || item.MATRICULA || '').trim(),
         nome: String(item.NOME || '').trim(),
         email: String(item.EMAIL || '').trim().toLowerCase(),
-        grupo: String(item.GRUPO || '').trim(),
+        grupo: String(item.GRUPO !== undefined ? item.GRUPO : '').trim(),
         turma: String(item.Turma || item.TURMA || '').trim()
       }));
     } catch (err) {
-      console.error("Erro ao carregar o arquivo turma.xlsx do GitHub:", err);
+      console.error("Erro ao carregar o arquivo turma.xlsx:", err);
+      alert("Erro ao carregar a lista de alunos do arquivo turma.xlsx. Verifique se o arquivo está na raiz do GitHub.");
     }
   }
 
-  carregarDadosTurma();
+  // INICIALIZAÇÃO CONTROLADA PARA EVITAR ERRO DE CORRIDA
+  async function inicializarSistema() {
+    await carregarDadosTurma();
+    
+    document.getElementById('loading-spinner').classList.add('d-none');
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const aluno = alunosData.find(a => a.email.toLowerCase() === user.email.toLowerCase());
+        if (aluno) {
+          usuarioLogadoData = aluno;
+          carregarFormularioAvaliacao(aluno);
+        } else {
+          alert("E-mail autenticado não encontrado na lista turma.xlsx.");
+          signOut(auth);
+        }
+      } else {
+        document.getElementById('auth-container').classList.remove('d-none');
+        document.getElementById('form-avaliacao').classList.add('d-none');
+      }
+    });
+  }
+
+  inicializarSistema();
 
   // CADASTRO DE ALUNO / PROFESSOR
   document.getElementById('btn-cadastrar').addEventListener('click', async () => {
@@ -204,7 +234,7 @@
 
     try {
       await createUserWithEmailAndPassword(auth, email, senha);
-      alert("Cadastro realizado! Você já está conectado.");
+      alert("Cadastro realizado com sucesso!");
     } catch (error) {
       alert("Erro ao cadastrar: " + error.message);
     }
@@ -222,23 +252,9 @@
     }
   });
 
-  // VERIFICA SESSÃO DO USUÁRIO
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      const aluno = alunosData.find(a => a.email.toLowerCase() === user.email.toLowerCase());
-      if (aluno) {
-        usuarioLogadoData = aluno;
-        carregarFormularioAvaliacao(aluno);
-      }
-    } else {
-      document.getElementById('auth-container').classList.remove('d-none');
-      document.getElementById('form-avaliacao').classList.add('d-none');
-    }
-  });
-
   document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
 
-function carregarFormularioAvaliacao(aluno) {
+  function carregarFormularioAvaliacao(aluno) {
     document.getElementById('auth-container').classList.add('d-none');
     document.getElementById('form-avaliacao').classList.remove('d-none');
     document.getElementById('info-avaliador').innerText = aluno.nome;
@@ -247,11 +263,11 @@ function carregarFormularioAvaliacao(aluno) {
 
     let colegas = [];
 
-    // SE FOR PROFESSOR (Grupo 0): Carrega TODOS os alunos da planilha para teste
+    // SE FOR PROFESSOR (Grupo 0): Carrega TODOS os alunos das turmas para testes
     if (String(aluno.grupo) === "0") {
       colegas = alunosData.filter(a => String(a.grupo) !== "0");
     } else {
-      // SE FOR ALUNO: Filtra apenas colegas da MESMA Turma e MESMO Grupo
+      // SE FOR ALUNO: Filtra apenas colegas da mesma Turma e mesmo Grupo
       colegas = alunosData.filter(a => 
         String(a.turma) === String(aluno.turma) && 
         String(a.grupo) === String(aluno.grupo) && 
@@ -266,7 +282,6 @@ function carregarFormularioAvaliacao(aluno) {
     colegas.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.nome;
-      // Exibe Nome, Turma e Grupo no menu do professor para facilitar a identificacao
       opt.innerText = String(aluno.grupo) === "0" 
         ? `${c.nome} (Turma ${c.turma} - Grupo ${c.grupo})` 
         : c.nome;
