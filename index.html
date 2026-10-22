@@ -238,7 +238,7 @@
 
   document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
 
-  function carregarFormularioAvaliacao(aluno) {
+function carregarFormularioAvaliacao(aluno) {
     document.getElementById('auth-container').classList.add('d-none');
     document.getElementById('form-avaliacao').classList.remove('d-none');
     document.getElementById('info-avaliador').innerText = aluno.nome;
@@ -247,11 +247,11 @@
 
     let colegas = [];
 
-    // SE FOR PROFESSOR (Grupo 0): Lista todos os alunos para testes
+    // SE FOR PROFESSOR (Grupo 0): Carrega TODOS os alunos da planilha para teste
     if (String(aluno.grupo) === "0") {
-      colegas = alunosData.filter(a => a.email !== aluno.email && String(a.grupo) !== "0");
+      colegas = alunosData.filter(a => String(a.grupo) !== "0");
     } else {
-      // SE FOR ALUNO: Filtra apenas colegas da mesma Turma e do mesmo Grupo
+      // SE FOR ALUNO: Filtra apenas colegas da MESMA Turma e MESMO Grupo
       colegas = alunosData.filter(a => 
         String(a.turma) === String(aluno.turma) && 
         String(a.grupo) === String(aluno.grupo) && 
@@ -266,7 +266,10 @@
     colegas.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.nome;
-      opt.innerText = String(aluno.grupo) === "0" ? `${c.nome} (Turma ${c.turma} - Grupo ${c.grupo})` : c.nome;
+      // Exibe Nome, Turma e Grupo no menu do professor para facilitar a identificacao
+      opt.innerText = String(aluno.grupo) === "0" 
+        ? `${c.nome} (Turma ${c.turma} - Grupo ${c.grupo})` 
+        : c.nome;
       selectColega.appendChild(opt);
     });
   }
