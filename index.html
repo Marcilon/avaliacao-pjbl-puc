@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Avaliação por Pares - PjBL PUC</title>
+  <title>Avaliação por Pares - PjBL PUC - Projeto Integrador Beta</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
@@ -77,7 +77,7 @@
         <div class="alert alert-info py-2 d-flex justify-content-between align-items-center">
           <div>
             <strong>Avaliador:</strong> <span id="info-avaliador"></span><br>
-            <strong>Grupo:</strong> <span id="info-grupo"></span>
+            <strong>Turma:</strong> <span id="info-turma"></span> | <strong>Grupo:</strong> <span id="info-grupo"></span>
           </div>
           <button type="button" id="btn-logout" class="btn btn-outline-danger btn-sm">Sair</button>
         </div>
@@ -162,13 +162,11 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // COLE AQUI A URL DO SEU POWER AUTOMATE
-  const POWER_AUTOMATE_WEBHOOK_URL = "COLE_AQUI_A_URL_DO_POWER_AUTOMATE";
+  const POWER_AUTOMATE_WEBHOOK_URL = "https://default73319f4289084b899f8d558cf4d5d7.76.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/19/workflows/38d2aef2a62e4284b5aa1faef602b3a0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5WeoxBf1W0TpdZ3Q-_JPrxXbbQKz5g-_6aaJs5FuKgA";
   
   let alunosData = [];
   let usuarioLogadoData = null;
 
-  // BUSCA A PLANILHA SALVA NO REPOSITÓRIO AUTOMATICAMENTE
   async function carregarDadosTurma() {
     try {
       const response = await fetch('./turma.xlsx');
@@ -181,7 +179,8 @@
         matricula: String(item.MATRÍCULA || item.MATRICULA || '').trim(),
         nome: String(item.NOME || '').trim(),
         email: String(item.EMAIL || '').trim().toLowerCase(),
-        grupo: String(item.GRUPO || '').trim()
+        grupo: String(item.GRUPO || '').trim(),
+        turma: String(item.Turma || item.TURMA || '').trim()
       }));
     } catch (err) {
       console.error("Erro ao carregar o arquivo turma.xlsx do GitHub:", err);
@@ -190,7 +189,7 @@
 
   carregarDadosTurma();
 
-  // CADASTRO DE ALUNO
+  // CADASTRO DE ALUNO / PROFESSOR
   document.getElementById('btn-cadastrar').addEventListener('click', async () => {
     const email = document.getElementById('reg-email').value.trim().toLowerCase();
     const matricula = document.getElementById('reg-matricula').value.trim();
@@ -211,7 +210,7 @@
     }
   });
 
-  // LOGIN DE ALUNO
+  // LOGIN
   document.getElementById('btn-login').addEventListener('click', async () => {
     const email = document.getElementById('login-email').value.trim().toLowerCase();
     const senha = document.getElementById('login-senha').value;
@@ -243,16 +242,31 @@
     document.getElementById('auth-container').classList.add('d-none');
     document.getElementById('form-avaliacao').classList.remove('d-none');
     document.getElementById('info-avaliador').innerText = aluno.nome;
+    document.getElementById('info-turma').innerText = aluno.turma;
     document.getElementById('info-grupo').innerText = aluno.grupo;
 
-    const colegas = alunosData.filter(a => String(a.grupo) === String(aluno.grupo) && a.email !== aluno.email);
+    let colegas = [];
+
+    // SE FOR PROFESSOR (Grupo 0): Lista todos os alunos para testes
+    if (String(aluno.grupo) === "0") {
+      colegas = alunosData.filter(a => a.email !== aluno.email && String(a.grupo) !== "0");
+    } else {
+      // SE FOR ALUNO: Filtra apenas colegas da mesma Turma e do mesmo Grupo
+      colegas = alunosData.filter(a => 
+        String(a.turma) === String(aluno.turma) && 
+        String(a.grupo) === String(aluno.grupo) && 
+        a.email !== aluno.email &&
+        String(a.grupo) !== "0"
+      );
+    }
+
     const selectColega = document.getElementById('select-colega');
     selectColega.innerHTML = '<option value="">-- Selecione o colega --</option>';
     
     colegas.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.nome;
-      opt.innerText = c.nome;
+      opt.innerText = String(aluno.grupo) === "0" ? `${c.nome} (Turma ${c.turma} - Grupo ${c.grupo})` : c.nome;
       selectColega.appendChild(opt);
     });
   }
@@ -265,6 +279,7 @@
 
     const payload = {
       Data_Hora: new Date().toLocaleString("pt-BR"),
+      Turma: usuarioLogadoData.turma,
       Avaliador_Nome: usuarioLogadoData.nome,
       Avaliador_Email: usuarioLogadoData.email,
       Grupo: usuarioLogadoData.grupo,
@@ -290,7 +305,7 @@
         document.getElementById('alert-sucesso').classList.remove('d-none');
       }
     } catch (err) {
-      alert("Erro ao enviar avaliação. Verifique a URL do Power Automate.");
+      alert("Erro ao enviar avaliação. Verifique a conexão.");
       btnEnviar.disabled = false;
     }
   });
