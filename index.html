@@ -41,6 +41,7 @@
     }
     
     .badge-pendente { background-color: #ffc107; color: #000; }
+    .badge-etapa { background-color: #0d6efd; color: #fff; }
     .badge-concluido { background-color: #198754; color: #fff; }
   </style>
 </head>
@@ -58,7 +59,7 @@
       <!-- CARREGANDO DADOS -->
       <div id="loading-spinner" class="text-center my-4">
         <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 text-muted">A carregar lista de alunos...</p>
+        <p class="mt-2 text-muted">Carregando lista de alunos...</p>
       </div>
 
       <!-- TELA DE AUTENTICAÇÃO (LOGIN / CADASTRO) -->
@@ -107,7 +108,7 @@
         </div>
       </div>
 
-      <!-- TELA DO FORMULÁRIO DE AVALIAÇÃO -->
+      <!-- CONTAINER PRINCIPAL DE AVALIAÇÃO -->
       <div id="form-avaliacao" class="d-none mt-2">
         <div class="alert alert-info py-2 d-flex justify-content-between align-items-center mb-3">
           <div>
@@ -117,16 +118,17 @@
           <button type="button" id="btn-logout" class="btn btn-outline-danger btn-sm">Sair</button>
         </div>
 
-        <!-- PAINEL DE PROGRESSO DE AVALIAÇÕES -->
+        <!-- PAINEL DE PROGRESSO -->
         <div id="painel-progresso" class="card bg-light p-3 mb-4">
           <div class="d-flex justify-content-between align-items-center mb-1">
-            <h6 class="mb-0 fw-bold">Status do Grupo</h6>
+            <h6 class="mb-0 fw-bold" id="titulo-painel">Etapa 1: Avaliação do Grupo</h6>
             <span id="badge-status" class="badge badge-pendente">Pendentes</span>
           </div>
           <small id="texto-progresso" class="text-muted"></small>
         </div>
 
-        <form id="inner-form">
+        <!-- ETAPA 1: AVALIAÇÃO DE COLEGAS -->
+        <form id="form-colegas">
           <h5 class="mb-3">1. Selecione o Colega a Avaliar</h5>
           <div class="mb-3">
             <select id="select-colega" class="form-select" required>
@@ -203,7 +205,7 @@
 
           <hr>
 
-          <h5 class="mb-3">3. Feedback do Colega</h5>
+          <h5 class="mb-3">3. Feedback Individual</h5>
           <div class="mb-3">
             <label class="form-label fw-bold">Pontos Positivos do Colega *</label>
             <textarea id="pontos-positivos" class="form-control" rows="2" required placeholder="Descreva os pontos fortes e principais contribuições do colega"></textarea>
@@ -213,26 +215,35 @@
             <textarea id="pontos-melhoria" class="form-control" rows="2" required placeholder="Descreva aspectos que o colega pode melhorar e justificativa da nota"></textarea>
           </div>
 
-          <hr>
+          <button type="submit" id="btn-enviar-colega" class="btn btn-primary w-100 btn-lg mt-3">Salvar e Avaliar Próximo Colega</button>
+        </form>
 
-          <h5 class="mb-3">4. Avaliação Geral da Disciplina / Curso</h5>
+        <!-- ETAPA 2: AVALIAÇÃO DA DISCIPLINA (EXIBIDA SÓ AO FINAL) -->
+        <form id="form-disciplina" class="d-none">
+          <div class="alert alert-success py-2 mb-4 text-center">
+            <strong>✓ Todos os colegas do grupo foram avaliados!</strong>
+          </div>
+
+          <h5 class="mb-3">Avaliação Geral da Disciplina / Curso</h5>
+          <p class="text-muted small">Para concluir, responda às duas perguntas finais sobre a metodologia e o transcorrer da disciplina PjBL:</p>
+          
           <div class="mb-3">
             <label class="form-label fw-bold">Pontos Positivos da Disciplina *</label>
-            <textarea id="disciplina-positivos" class="form-control" rows="2" required placeholder="O que você mais gostou na disciplina/metodologia PjBL?"></textarea>
+            <textarea id="disciplina-positivos" class="form-control" rows="3" required placeholder="O que você mais gostou na disciplina/metodologia PjBL?"></textarea>
           </div>
           <div class="mb-3">
             <label class="form-label fw-bold">Pontos de Melhoria da Disciplina *</label>
-            <textarea id="disciplina-melhoria" class="form-control" rows="2" required placeholder="O que pode ser melhorado na disciplina para os próximos semestres?"></textarea>
+            <textarea id="disciplina-melhoria" class="form-control" rows="3" required placeholder="O que pode ser melhorado na disciplina para os próximos semestres?"></textarea>
           </div>
 
-          <button type="submit" id="btn-enviar" class="btn btn-primary w-100 btn-lg mt-3">Salvar e Enviar Avaliação Deste Colega</button>
+          <button type="submit" id="btn-enviar-disciplina" class="btn btn-success w-100 btn-lg mt-3">Finalizar e Entregar Todas as Avaliações</button>
         </form>
       </div>
 
       <!-- FEEDBACK DE CONCLUSÃO TOTAL -->
       <div id="alert-sucesso" class="alert alert-success d-none mt-4 text-center">
         <h4>🎉 Todas as Avaliações Foram Concluídas!</h4>
-        <p>Você avaliou com sucesso todos os colegas do seu grupo. Sua participação foi registrada!</p>
+        <p>Sua avaliação do grupo e da disciplina foi registrada com sucesso no sistema. Obrigado pela participação!</p>
       </div>
 
     </div>
@@ -354,7 +365,7 @@
     document.getElementById('info-turma').innerText = aluno.turma;
     document.getElementById('info-grupo').innerText = aluno.grupo;
 
-    // SE FOR PROFESSOR (Grupo 0): Carrega TODOS os alunos
+    // SE FOR PROFESSOR (Grupo 0): Carrega TODOS os alunos das turmas
     if (String(aluno.grupo) === "0") {
       colegasPendentes = alunosData.filter(a => String(a.grupo) !== "0");
     } else {
@@ -374,7 +385,6 @@
     const selectColega = document.getElementById('select-colega');
     selectColega.innerHTML = '<option value="">-- Selecione o colega --</option>';
 
-    // Filtra lista de pendentes removendo os já avaliados nesta sessão
     const naoAvaliados = colegasPendentes.filter(c => !colegasAvaliados.includes(c.nome));
 
     naoAvaliados.forEach(c => {
@@ -390,26 +400,32 @@
     const totalAvaliados = colegasAvaliados.length;
     const badge = document.getElementById('badge-status');
     const texto = document.getElementById('texto-progresso');
+    const tituloPainel = document.getElementById('titulo-painel');
 
+    // SE TODOS OS COLEGAS JÁ FORAM AVALIADOS -> VAI PARA A ETAPA 2 (DISCIPLINA)
     if (naoAvaliados.length === 0 && totalColegas > 0) {
-      document.getElementById('inner-form').classList.add('d-none');
-      document.getElementById('alert-sucesso').classList.remove('d-none');
-      badge.className = "badge badge-concluido";
-      badge.innerText = "100% Concluído";
-      texto.innerText = `Você avaliou todos os ${totalColegas} colegas do seu grupo!`;
+      document.getElementById('form-colegas').classList.add('d-none');
+      document.getElementById('form-disciplina').classList.remove('d-none');
+      
+      tituloPainel.innerText = "Etapa 2: Avaliação da Disciplina";
+      badge.className = "badge badge-etapa";
+      badge.innerText = "Última Etapa";
+      texto.innerText = "Colegas avaliados com sucesso! Agora preencha o feedback sobre a disciplina.";
     } else {
-      document.getElementById('inner-form').classList.remove('d-none');
-      document.getElementById('alert-sucesso').classList.add('d-none');
+      document.getElementById('form-colegas').classList.remove('d-none');
+      document.getElementById('form-disciplina').classList.add('d-none');
+      
+      tituloPainel.innerText = "Etapa 1: Avaliação do Grupo";
       badge.className = "badge badge-pendente";
-      badge.innerText = "Avaliação Pendente";
-      texto.innerHTML = `Avaliações efetuadas: <strong>${totalAvaliados} de ${totalColegas}</strong>. Colegas restantes: ${naoAvaliados.map(a => a.nome).join(', ')}.`;
+      badge.innerText = "Pendente";
+      texto.innerHTML = `Colegas avaliados: <strong>${totalAvaliados} de ${totalColegas}</strong>. Faltam: ${naoAvaliados.map(a => a.nome).join(', ')}.`;
     }
   }
 
-  // ENVIO DO FORMULÁRIO
-  document.getElementById('inner-form').addEventListener('submit', async (e) => {
+  // ENVIO DA AVALIAÇÃO DE CADA COLEGA (ETAPA 1)
+  document.getElementById('form-colegas').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btnEnviar = document.getElementById('btn-enviar');
+    const btnEnviar = document.getElementById('btn-enviar-colega');
     const nomeColega = document.getElementById('select-colega').value;
 
     if (!nomeColega) {
@@ -422,7 +438,7 @@
     const valCriterio3 = document.querySelector('input[name="criterio3"]:checked')?.value;
 
     if (!valCriterio1 || !valCriterio2 || !valCriterio3) {
-      alert("Por favor, atribua notas de 1 a 10 para todos os critérios do colega.");
+      alert("Por favor, atribua notas de 1 a 10 para todos os critérios.");
       return;
     }
 
@@ -441,6 +457,49 @@
       Criterio_3: parseInt(valCriterio3),
       Pontos_Positivos: document.getElementById('pontos-positivos').value,
       Pontos_Melhoria_Justificativa: document.getElementById('pontos-melhoria').value,
+      Disciplina_Pontos_Positivos: "", // Fica vazio para ser preenchido só na Etapa 2
+      Disciplina_Pontos_Melhoria: ""
+    };
+
+    try {
+      const res = await fetch(POWER_AUTOMATE_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok || res.status === 202) {
+        colegasAvaliados.push(nomeColega);
+        document.getElementById('form-colegas').reset();
+        atualizarPainelEConteudoSelect();
+      }
+    } catch (err) {
+      alert("Erro ao enviar avaliação. Verifique a conexão.");
+    } finally {
+      btnEnviar.disabled = false;
+      btnEnviar.innerText = "Salvar e Avaliar Próximo Colega";
+    }
+  });
+
+  // ENVIO DA AVALIAÇÃO DA DISCIPLINA (ETAPA 2 - FINAL)
+  document.getElementById('form-disciplina').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btnEnviarDisc = document.getElementById('btn-enviar-disciplina');
+    btnEnviarDisc.disabled = true;
+    btnEnviarDisc.innerText = "A finalizar...";
+
+    const payload = {
+      Data_Hora: new Date().toLocaleString("pt-BR"),
+      Turma: usuarioLogadoData.turma,
+      Avaliador_Nome: usuarioLogadoData.nome,
+      Avaliador_Email: usuarioLogadoData.email,
+      Grupo: usuarioLogadoData.grupo,
+      Avaliado_Nome: "AVALIAÇÃO DA DISCIPLINA",
+      Criterio_1: 0,
+      Criterio_2: 0,
+      Criterio_3: 0,
+      Pontos_Positivos: "N/A",
+      Pontos_Melhoria_Justificativa: "N/A",
       Disciplina_Pontos_Positivos: document.getElementById('disciplina-positivos').value,
       Disciplina_Pontos_Melhoria: document.getElementById('disciplina-melhoria').value
     };
@@ -453,16 +512,13 @@
       });
 
       if (res.ok || res.status === 202) {
-        colegasAvaliados.push(nomeColega);
-        document.getElementById('inner-form').reset();
-        atualizarPainelEConteudoSelect();
-        alert(`Avaliação de ${nomeColega} enviada com sucesso!`);
+        document.getElementById('form-disciplina').classList.add('d-none');
+        document.getElementById('painel-progresso').classList.add('d-none');
+        document.getElementById('alert-sucesso').classList.remove('d-none');
       }
     } catch (err) {
-      alert("Erro ao enviar avaliação. Verifique a conexão.");
-    } finally {
-      btnEnviar.disabled = false;
-      btnEnviar.innerText = "Salvar e Enviar Avaliação Deste Colega";
+      alert("Erro ao enviar feedback da disciplina.");
+      btnEnviarDisc.disabled = false;
     }
   });
 </script>
